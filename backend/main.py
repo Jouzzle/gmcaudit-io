@@ -341,7 +341,18 @@ async def download_pdf(scan_id: str, token: Optional[str] = None):
         raise HTTPException(403, "Payment required")
 
     pdf_path = scan.get("pdf_path")
-    if not pdf_path or not os.path.exists(pdf_path):
+    if not pdf_path:
+        # Try generating now
+        try:
+            from report.generator import generate_pdf
+            import asyncio
+            pdf_path = asyncio.run(generate_pdf(scan["result"], scan_id))
+            scans_db[scan_id]["pdf_path"] = pdf_path
+        except Exception as ex:
+            import traceback
+            print(f"[PDF ERROR] {traceback.format_exc()}")
+            raise HTTPException(500, f"PDF generation failed: {str(ex)}")
+    if not os.path.exists(pdf_path):
         raise HTTPException(404, "PDF not yet generated")
 
     return FileResponse(
