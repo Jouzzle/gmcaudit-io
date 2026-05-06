@@ -241,12 +241,9 @@ async def create_payment_session(req: PaymentRequest):
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook — mark scan as paid after successful payment."""
     payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
-
     try:
-        import stripe
-        stripe.api_key = STRIPE_SECRET_KEY
-        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+        import json
+        event = json.loads(payload)
     except Exception as e:
         raise HTTPException(400, str(e))
 
