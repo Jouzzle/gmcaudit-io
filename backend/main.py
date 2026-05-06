@@ -325,10 +325,11 @@ async def _deliver_report(scan_id: str, email: str, token: str):
 
 
 async def _send_report_email(email: str, scan_id: str, token: str, pdf_path: str):
-    """Send PDF report via email. Implement with your email provider."""
-    # TODO: implement with SendGrid, Resend, or Mailgun
-    report_url = f"{FRONTEND_URL}/report/{scan_id}?token={token}"
-    print(f"[EMAIL] Would send report to {email} — URL: {report_url}")
+    """Send PDF report via Resend."""
+    from email.sender import send_report_email
+    scan = scans_db.get(scan_id, {})
+    result = scan.get("result", {})
+    await send_report_email(email, result, scan_id, token)
 
 
 @app.get("/api/scan/{scan_id}/pdf")
