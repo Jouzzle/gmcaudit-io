@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const API = "http://localhost:8000";
+const API = "https://gmcaudit-io-production.up.railway.app";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const css = `
