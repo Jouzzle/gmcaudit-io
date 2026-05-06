@@ -29,8 +29,32 @@ app.add_middleware(
 )
 
 # ─── In-memory store (replace with PostgreSQL in production) ───
-scans_db: dict = {}
-tokens_db: dict = {}  # payment_token -> scan_id
+import json as _json
+import os as _os
+
+_DB_FILE = "/tmp/scans_db.json"
+_TOKENS_FILE = "/tmp/tokens_db.json"
+
+def _load_db(path):
+    try:
+        if _os.path.exists(path):
+            return _json.load(open(path))
+    except:
+        pass
+    return {}
+
+def _save_db(path, data):
+    try:
+        _json.dump(data, open(path, "w"))
+    except:
+        pass
+
+scans_db: dict = _load_db(_DB_FILE)
+tokens_db: dict = _load_db(_TOKENS_FILE)  # payment_token -> scan_id
+
+def _persist():
+    _save_db(_DB_FILE, scans_db)
+    _save_db(_TOKENS_FILE, tokens_db)
 
 # ─── Config ───
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
@@ -177,7 +201,23 @@ async def get_full_report(scan_id: str, token: Optional[str] = None):
         raise HTTPException(400, "Scan not complete")
 
     # Verify payment
-    if not scan["paid"] and not _verify_token(scan_id, token):
+    # Check paid flag, token, OR verify via Stripe session_id
+    session_id = token  # frontend may pass session_id as token param
+    verified = scan.get("paid") or _verify_token(scan_id, token)
+    if not verified and session_id and session_id.startswith("cs_"):
+        try:
+            import stripe
+            stripe.api_key = STRIPE_SECRET_KEY
+            sess = stripe.checkout.Session.retrieve(session_id)
+            if sess.payment_status == "paid":
+                scan_meta = sess.get("metadata", {})
+                if scan_meta.get("scan_id") == scan_id:
+                    scans_db[scan_id]["paid"] = True
+                    _persist()
+                    verified = True
+        except:
+            pass
+    if not verified:
         raise HTTPException(403, "Payment required to access full report")
 
     return scan["result"]
@@ -263,6 +303,7 @@ async def stripe_webhook(request: Request):
 
             # Trigger PDF generation and email delivery
             asyncio.create_task(_deliver_report(scan_id, email, access_token))
+            _persist()
 
     return {"received": True}
 
