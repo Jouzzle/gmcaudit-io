@@ -1054,7 +1054,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sid = params.get("scan_id") || window.location.pathname.split("/report/")[1]?.split("?")[0];
-    const tok = params.get("token");
+    const tok = params.get("token") || params.get("session_id");
     const session = params.get("session_id");
     if (sid && (tok || session)) {
       setScanId(sid);
