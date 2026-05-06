@@ -326,7 +326,11 @@ async def _deliver_report(scan_id: str, email: str, token: str):
 
 async def _send_report_email(email: str, scan_id: str, token: str, pdf_path: str):
     """Send PDF report via Resend."""
-    from email.sender import send_report_email
+    import importlib, sys
+    spec = importlib.util.spec_from_file_location("sender", "/app/email/sender.py")
+    sender_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sender_mod)
+    send_report_email = sender_mod.send_report_email
     scan = scans_db.get(scan_id, {})
     result = scan.get("result", {})
     await send_report_email(email, result, scan_id, token)
