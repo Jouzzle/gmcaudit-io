@@ -209,14 +209,17 @@ async def get_full_report(scan_id: str, token: Optional[str] = None):
             import stripe
             stripe.api_key = STRIPE_SECRET_KEY
             sess = stripe.checkout.Session.retrieve(session_id)
+            print(f"[STRIPE] payment_status={sess.payment_status} metadata={sess.metadata}")
             if sess.payment_status == "paid":
-                scan_meta = sess.get("metadata", {})
+                scan_meta = sess.metadata or {}
                 if scan_meta.get("scan_id") == scan_id:
                     scans_db[scan_id]["paid"] = True
                     _persist()
                     verified = True
-        except:
-            pass
+                else:
+                    print(f"[STRIPE] scan_id mismatch: expected {scan_id} got {scan_meta.get('scan_id')}")
+        except Exception as ex:
+            print(f"[STRIPE] error: {ex}")
     if not verified:
         raise HTTPException(403, "Payment required to access full report")
 
