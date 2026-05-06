@@ -358,7 +358,7 @@ async def download_pdf(scan_id: str, token: Optional[str] = None):
     return FileResponse(
         pdf_path,
         media_type="application/pdf",
-        filename=f"gmcaudit-{scan['domain']}-report.pdf"
+        filename=f"gmcaudit-{scan.get('domain', scan.get('result', {}).get('domain', 'report'))}-report.pdf"
     )
 
 
